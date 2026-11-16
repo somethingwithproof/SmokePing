@@ -24,14 +24,17 @@ use SPWeb qw(load_sample_cfg render);
     like('James', $f->($re_cfg, 'jam.s'), 'regex filter matches as a regex');
     unlike('James', $f->($lit_cfg, 'jam.s'), 'literalsearch matches literally');
     like('jam.s', $f->($lit_cfg, 'jam.s'), 'literalsearch finds the literal text');
-    like('James', $f->($re_cfg, 'J(.*)(.*)(.*)s'), 'three quantifiers stay a regex');
-    unlike('James', $f->($re_cfg, 'J(.*)(.*)(.*)(.*)s'), 'four quantifiers fall back to literal');
-    like('J(.*)(.*)(.*)(.*)s', $f->($re_cfg, 'J(.*)(.*)(.*)(.*)s'), 'literal fallback still finds the text');
+    like('James', $f->($re_cfg, '^Jam[ae]s$|^Other$'), 'fixed-width alternatives and classes stay a regex');
+    unlike('Jameson', $f->($re_cfg, '^Jam[ae]s$'), 'anchors remain effective');
+    for my $pattern ('Ja.*s', 'Ja.+s', 'Ja.?s', 'Ja{2}s', '(James|Other)', 'Ja\\w+s') {
+        unlike('James', $f->($re_cfg, $pattern), 'unsupported syntax falls back to literal');
+        like($pattern, $f->($re_cfg, $pattern), 'literal fallback still finds the text');
+    }
     unlike('James', $f->($re_cfg, 'J' . ('.' x 64)), 'long filter falls back to literal');
     like('James', $f->($re_cfg, 'J' . ('.?' x 0) . 'ames'), 'short filter is unaffected');
-    my $bad = eval { $f->($re_cfg, 'Jam(') };
+    my $bad = eval { $f->($re_cfg, 'Jam[') };
     ok($bad, 'invalid regex does not die');
-    like('Jam(', $bad, 'invalid regex is matched literally');
+    like('Jam[', $bad, 'invalid regex is matched literally');
 }
 
 my ($cfg, $tmp) = load_sample_cfg();

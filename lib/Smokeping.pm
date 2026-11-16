@@ -631,14 +631,14 @@ sub init_target_tree ($$$$) {
 };
 
 # Menu filters come from the request and are matched against every menu
-# entry. Unless literalsearch is set they are regular expressions; filters
-# that are long, use many quantifiers or do not compile are matched literally
-# instead, which keeps the cost of a search bounded.
+# entry. Only fixed-width atoms and alternatives are allowed as regexes;
+# repetition, grouping and escapes can introduce unbounded backtracking.
+# Other filters are matched literally.
 sub filter_regex ($$) {
     my ($cfg, $filter) = @_;
-    my $quantifiers = () = $filter =~ /[*+]/g;
     unless (($cfg->{Presentation}{literalsearch} || 'no') eq 'yes'
-            or length($filter) > 64 or $quantifiers > 3) {
+            or length($filter) > 64
+            or $filter !~ /\A[- _0-9a-zA-Z\^\[\].\$|]*\z/) {
         my $re = eval { qr/$filter/i };
         return $re if $re;
     }
@@ -3327,9 +3327,10 @@ DOC
            _doc => <<DOC,
 By default, SmokePing will process filter menu queries as regular
 expressions, if set to 'yes' searches will be treated as literal strings
-instead. Queries longer than 64 characters, with more than three '*' or
-'+' quantifiers, or that are not valid regular expressions are always
-treated as literal strings.
+instead. Regex queries support ASCII letters, digits, spaces, underscores,
+hyphens, dots, character classes, anchors and alternatives. Repetition,
+grouping and escapes are not supported. Queries using other syntax, longer
+than 64 characters, or that do not compile are treated as literal strings.
 DOC
            _re  => '(yes|no)',
            _re_error =>"this must either be 'yes' or 'no'",
